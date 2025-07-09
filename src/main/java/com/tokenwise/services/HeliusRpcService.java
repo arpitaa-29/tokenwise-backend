@@ -1,27 +1,36 @@
 package com.tokenwise.services;
 
-import com.tokenwise.DTOs.getTokenAccountsResponseDTO;
+import com.tokenwise.DTOs.GetTokenAccountsResponseDTO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClientException;
 
 import java.util.HashMap;
 import java.util.Map;
 
-
 @Service
+@RequiredArgsConstructor
 public class HeliusRpcService {
 
-    private final String API_KEY = "49d3a7a0-35ca-4006-8d3a-b297f1ad1bde";  // replace with your actual key
-    private final String HELIUS_URL = "https://mainnet.helius-rpc.com/?api-key=" + API_KEY;
+    @Value("${helius.api.key}")
+    private String apiKey;
 
-    private final RestTemplate restTemplate = new RestTemplate();
-    @Value("${tokenwise.page.limit:1000}") // default 1000 if not set
+    @Value("${helius.url:https://mainnet.helius-rpc.com}")
+    private String heliusBaseUrl;
+
+    @Value("${tokenwise.page.limit:1000}")
     private int defaultLimit;
 
-    public getTokenAccountsResponseDTO getTokenAccounts(String mint, String cursor, Integer limit) {
+    private final RestTemplate restTemplate;
+
+    public GetTokenAccountsResponseDTO getTokenAccounts(String mint, String cursor, Integer limit) {
         int useLimit = (limit == null) ? defaultLimit : limit;
+
+        String url = heliusBaseUrl + "/?api-key=" + apiKey;
+
         // Build request body
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("jsonrpc", "2.0");
@@ -31,24 +40,27 @@ public class HeliusRpcService {
         Map<String, Object> params = new HashMap<>();
         params.put("mint", mint);
         params.put("limit", useLimit);
-        params.put("cursor", cursor);  // can be null for first call
+        if (cursor != null) params.put("cursor", cursor);
 
         requestBody.put("params", params);
 
-        // Set headers
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
 
-        // Make POST request
-        ResponseEntity<getTokenAccountsResponseDTO> response = restTemplate.exchange(
-                HELIUS_URL,
-                HttpMethod.POST,
-                requestEntity,
-                getTokenAccountsResponseDTO.class);
-
-        return response.getBody();
+        try {
+            ResponseEntity<GetTokenAccountsResponseDTO> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    requestEntity,
+                    GetTokenAccountsResponseDTO.class
+            );
+            return response.getBody();
+        } catch (RestClientException ex) {
+            // Log error, optionally throw custom exception
+            // log.error("Helius API error", ex);
+            return null;
+        }
     }
 }
-

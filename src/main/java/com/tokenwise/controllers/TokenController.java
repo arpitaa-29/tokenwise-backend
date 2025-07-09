@@ -7,8 +7,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
-
 @RestController
 @RequestMapping("/api/token")
 public class TokenController {
@@ -22,7 +20,7 @@ public class TokenController {
     @GetMapping("/{mint}/top-holders")
     public ResponseEntity<List<TopHoldersResponseDTO>> getTopHolders(
             @PathVariable String mint,
-            @RequestParam(defaultValue = "60") int limit) {
+            @RequestParam(defaultValue = "150") int limit) {
 
         if (limit <= 0) {
             return ResponseEntity.badRequest().build();
@@ -32,3 +30,4 @@ public class TokenController {
         return ResponseEntity.ok(topHolders);
     }
 }
+
